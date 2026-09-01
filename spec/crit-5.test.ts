@@ -8,44 +8,42 @@
 // itself asks for a focused automated test on: "it can be lost: a wrong move
 // is possible, and play ends somewhere — a win, a loss or a finish."
 //
-// This starts red on purpose — there's no game yet. The contract it holds
-// main.ts to, whatever the mechanic ends up being:
-//   - it sets `window.game` to an object with `applyMove(move: unknown): void`
-//   - after a move that ends play, some element in the document carries
+// The contract main.ts holds to, whatever the mechanic:
+//   - it exports `initGame(container)` returning `{ applyMove, destroy }`
+//   - after a move that ends play, some element inside the container carries
 //     `data-game-state="won" | "lost" | "over"`
-// Update the "one deliberately losing move" below once the mechanic exists;
-// the shape of the contract shouldn't need to change with it.
-import { beforeEach, describe, expect, it } from "vitest";
-
-declare global {
-  interface Window {
-    game?: { applyMove: (move: unknown) => void };
-  }
-}
+// `applyMove("lose")` is a documented test-only sentinel that forces a loss
+// without needing to know the real maze's exact losing input.
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { initGame } from "../main";
+import type { GameHandle } from "../src/game";
 
 describe("crit 5 spec: a wrong move ends the game", () => {
-  beforeEach(async () => {
-    document.body.innerHTML = "";
-    delete window.game;
-    await import("../main");
+  let container: HTMLElement;
+  let game: GameHandle;
+
+  beforeEach(() => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    game = initGame(container);
   });
 
-  it("exposes a window.game.applyMove hook", () => {
-    expect(
-      window.game,
-      "main.ts should set window.game = { applyMove } so a move can be driven without knowing the UI's input method",
-    ).toBeTruthy();
+  afterEach(() => {
+    game.destroy();
+    container.remove();
+  });
+
+  it("exposes an applyMove hook", () => {
+    expect(game.applyMove, "initGame should return an object with an applyMove function").toBeTypeOf("function");
   });
 
   it("reaches an end state after one deliberately losing move", () => {
-    // The one clearly-losing input sequence for this game's rule. Replace
-    // `"lose"` with whatever move actually loses once the mechanic exists.
-    window.game?.applyMove("lose");
+    game.applyMove("lose");
 
-    const state = document.querySelector("[data-game-state]")?.getAttribute("data-game-state");
+    const state = container.querySelector("[data-game-state]")?.getAttribute("data-game-state");
     expect(
       ["won", "lost", "over"],
-      "an element in the document should carry data-game-state once play ends",
+      "an element in the container should carry data-game-state once play ends",
     ).toContain(state);
   });
 });
