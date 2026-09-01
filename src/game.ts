@@ -16,6 +16,11 @@ const STEP_MS = 150;
 const FRIGHT_TICKS = 40; // ~6s at 150ms/tick
 const FRIGHT_FLASH_TICKS = 12; // flash during the closing ~1.8s
 const GHOST_COLORS = ["#ff3b3b", "#ff9edb", "#3ff0ff", "#ffb347"];
+// Ghosts still take the true shortest path (see src/bfs.ts), but move at
+// half the player's speed and leave home staggered, one at a time, so a
+// first-time player gets a real chance to react instead of an instant swarm.
+const GHOST_MOVE_EVERY = 2;
+const GHOST_RELEASE_STAGGER_TICKS = 20; // ~3s at 150ms/tick
 
 const DELTA: Record<Direction, Point> = {
   up: { x: 0, y: -1 },
@@ -38,7 +43,10 @@ export function initGame(container: HTMLElement): GameHandle {
   const pellets = new Set(maze.pellets.map(pointKey));
   const totalDots = dots.size;
 
-  const ghosts = maze.ghostHome.map((home, i) => new Ghost(i, GHOST_COLORS[i % GHOST_COLORS.length], home));
+  const ghosts = maze.ghostHome.map(
+    (home, i) =>
+      new Ghost(i, GHOST_COLORS[i % GHOST_COLORS.length], home, i * GHOST_RELEASE_STAGGER_TICKS, GHOST_MOVE_EVERY),
+  );
 
   let playerPos: Point = { ...maze.playerSpawn };
   let facing: Direction = "left";

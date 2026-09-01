@@ -14,7 +14,7 @@ const FRIGHTENED_FLASH_COLOR = "#ffffff";
 interface GhostView {
   pos: Point;
   color: string;
-  state: "normal" | "frightened" | "respawning";
+  state: "normal" | "frightened" | "respawning" | "waiting";
 }
 
 export interface RenderView {
@@ -90,7 +90,7 @@ function drawGhost(ctx: CanvasRenderingContext2D, ghost: GhostView, flashWhite: 
   const color =
     ghost.state === "frightened" ? (flashWhite ? FRIGHTENED_FLASH_COLOR : FRIGHTENED_COLOR) : ghost.color;
 
-  ctx.globalAlpha = ghost.state === "respawning" ? 0.35 : 1;
+  ctx.globalAlpha = ghost.state === "respawning" || ghost.state === "waiting" ? 0.35 : 1;
   ctx.fillStyle = color;
 
   ctx.beginPath();

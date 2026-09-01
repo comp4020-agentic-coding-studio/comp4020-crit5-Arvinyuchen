@@ -1,7 +1,7 @@
 import { nextStepToward, stepAwayFrom } from "./bfs";
 import type { Grid, Point } from "./maze";
 
-export type GhostState = "normal" | "frightened" | "respawning";
+export type GhostState = "normal" | "frightened" | "respawning" | "waiting";
 
 const RESPAWN_TICKS = 6;
 
@@ -10,14 +10,20 @@ export class Ghost {
   readonly color: string;
   readonly home: Point;
   pos: Point;
-  state: GhostState = "normal";
+  state: GhostState;
   private respawnTicks = 0;
+  private waitTicks: number;
+  private readonly moveEvery: number;
+  private moveCounter = 0;
 
-  constructor(id: number, color: string, home: Point) {
+  constructor(id: number, color: string, home: Point, releaseDelayTicks = 0, moveEvery = 1) {
     this.id = id;
     this.color = color;
     this.home = { ...home };
     this.pos = { ...home };
+    this.waitTicks = releaseDelayTicks;
+    this.state = releaseDelayTicks > 0 ? "waiting" : "normal";
+    this.moveEvery = moveEvery;
   }
 
   /** Called when a power pellet is eaten. A respawning ghost stays put in
@@ -39,11 +45,19 @@ export class Ghost {
   }
 
   step(grid: Grid, playerPos: Point): void {
+    if (this.state === "waiting") {
+      this.waitTicks -= 1;
+      if (this.waitTicks <= 0) this.state = "normal";
+      return;
+    }
     if (this.state === "respawning") {
       this.respawnTicks -= 1;
       if (this.respawnTicks <= 0) this.state = "normal";
       return;
     }
+
+    this.moveCounter += 1;
+    if (this.moveCounter % this.moveEvery !== 0) return;
 
     const next =
       this.state === "frightened"
